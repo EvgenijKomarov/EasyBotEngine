@@ -12,7 +12,7 @@ namespace BotEngine.Domain
 
         public int? MessageId { get; set; }
 
-        public abstract string GetValidator();
+        public abstract string GetIdentificator();
 
         public abstract string[] GetData();
     }

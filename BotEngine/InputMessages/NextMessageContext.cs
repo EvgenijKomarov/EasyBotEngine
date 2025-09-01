@@ -10,16 +10,16 @@ namespace BotEngine.InputMessages
 {
     internal class NextMessageContext : MessageInput
     {
-        private string Validator;
+        private string Identificator;
         private string[] Data;
 
         public NextMessageContext(string validator, string[] data) 
         {
-            Validator = validator;
+            Identificator = validator;
             Data = data;
         }
 
-        public override string GetValidator() => Validator;
+        public override string GetIdentificator() => Identificator;
         public override string[] GetData() => Data;
     }
 }

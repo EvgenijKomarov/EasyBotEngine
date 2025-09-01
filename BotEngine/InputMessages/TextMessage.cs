@@ -15,7 +15,7 @@ namespace BotEngine.Domain
             Text = text;
         }
 
-        public override string GetValidator() => "Text";
+        public override string GetIdentificator() => "Text";
         public override string[] GetData() => [Text];
     }
 }

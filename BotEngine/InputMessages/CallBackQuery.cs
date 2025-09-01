@@ -21,7 +21,7 @@ namespace BotEngine.Domain
             Args = args.Skip(1).ToArray();
         }
 
-        public override string GetValidator() => QueryCommand;
+        public override string GetIdentificator() => QueryCommand;
 
         public override string[] GetData() => Args;
     }

@@ -8,39 +8,34 @@ namespace BotEngine
     public class BotEngine
     {
         private Dictionary<Type, string[]> _nodeValidators = new Dictionary<Type, string[]>();
-        protected Type defaultNodeType;
+        protected Type defaultNodeType = typeof(DefaultNode);
 
         public BotEngine(Type defaultNodeType)
         {
-            if (defaultNodeType == null)
-                throw new ArgumentNullException(nameof(defaultNodeType));
+            this.defaultNodeType = defaultNodeType ?? throw new ArgumentNullException(nameof(defaultNodeType));
 
             if (!typeof(Node).IsAssignableFrom(defaultNodeType))
                 throw new ArgumentException($"Type {defaultNodeType.Name} must inherit from Node");
-
-            this.defaultNodeType = defaultNodeType;
         }
+        public BotEngine() { }
 
         public BotEngine AddNode<T>() where T : Node, new()
         {
             var nodeType = typeof(T);
             var tempNode = new T();
-            _nodeValidators[nodeType] = tempNode.GetValidators();
+            _nodeValidators[nodeType] = tempNode.GetIdentificators();
             return this;
         }
 
         public async Task<Message?> ProcessMessage(MessageInput message)
         {
             var node = await GetNode(message);
-            if (node != null) 
+            return node != null ? new Message
             {
-                return new Message
-                {
-                    Text = node.Text,
-                    Buttons = node.Buttons
-                };
-            }
-            return null;
+                Text = node.Text,
+                Buttons = node.Buttons,
+                MessageId = node.MessageId
+            } : null;
         }
 
         private async Task<Node?> GetNode(MessageInput message)
@@ -49,7 +44,7 @@ namespace BotEngine
 
             foreach (var kvp in _nodeValidators)
             {
-                if (kvp.Value.Contains(message.GetValidator()))
+                if (kvp.Value.Contains(message.GetIdentificator()))
                 {
                     nodeType = kvp.Key;
                     break;
@@ -58,14 +53,12 @@ namespace BotEngine
 
             nodeType = nodeType ?? defaultNodeType;
 
-            if (nodeType == null) return null;
-
             if (Activator.CreateInstance(nodeType) is Node node)
             {
                 await node.Invoke(message);
-                if (node.isNeedProlongedIteration)
+                if (node.IsNeedProlongedIteration)
                 {
-                    return await GetNode(new NextMessageContext(node.NextValidator, node.NextData));
+                    return await GetNode(new NextMessageContext(node.NextIdentificator, node.NextData));
                 }
                 return node;
             }

@@ -11,5 +11,6 @@ namespace BotEngine.OutputMessage
     {
         public List<Button> Buttons { get; internal set; }
         public string Text { get; internal set; }
+        public int? MessageId { get; internal set; }
     }
 }
