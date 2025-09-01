@@ -5,21 +5,21 @@ using BotEngine.OutputMessage;
 
 namespace BotEngine
 {
-    public class BotEngine
+    public class EasyBotEngine
     {
         private Dictionary<Type, string[]> _nodeValidators = new Dictionary<Type, string[]>();
         protected Type defaultNodeType = typeof(DefaultNode);
 
-        public BotEngine(Type defaultNodeType)
+        public EasyBotEngine(Type defaultNodeType)
         {
             this.defaultNodeType = defaultNodeType ?? throw new ArgumentNullException(nameof(defaultNodeType));
 
             if (!typeof(Node).IsAssignableFrom(defaultNodeType))
                 throw new ArgumentException($"Type {defaultNodeType.Name} must inherit from Node");
         }
-        public BotEngine() { }
+        public EasyBotEngine() { }
 
-        public BotEngine AddNode<T>() where T : Node, new()
+        public EasyBotEngine AddNode<T>() where T : Node, new()
         {
             var nodeType = typeof(T);
             var tempNode = new T();
