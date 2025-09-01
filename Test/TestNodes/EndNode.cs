@@ -1,5 +1,6 @@
 ﻿using BotEngine.Domain;
 using BotEngine.Nodes;
+using BotEngine.Technical;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +13,9 @@ namespace Test.TestNodes
     internal class EndNode: Node
     {
         public override string[] GetIdentificators() => ["End"];
-        public override Task Invoke(MessageInput message)
+        public override async Task<INodeInvokeResult> Invoke(MessageInput message)
         {
-            Text = "Goodbye";
-
-            return Task.CompletedTask;
+            return CompleteProcess("Goodbye");
         }
     }
 }

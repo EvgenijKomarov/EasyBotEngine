@@ -1,4 +1,5 @@
 ﻿using BotEngine.Domain;
+using BotEngine.Technical;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +11,9 @@ namespace BotEngine.Nodes
     public class DefaultNode: Node
     {
         public override string[] GetIdentificators() => [];
-        public override Task Invoke(MessageInput input)
+        public override async Task<INodeInvokeResult> Invoke(MessageInput input)
         {
-            Text = $"An error occured during procession of BotEngine. {input.GetData()}";
-            return Task.CompletedTask;
+            return CompleteProcess($"An error occured during procession of BotEngine. {input.GetData()}");
         }
     }
 }

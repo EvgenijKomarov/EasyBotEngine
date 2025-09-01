@@ -1,5 +1,6 @@
 ﻿using BotEngine.Domain;
 using BotEngine.Nodes.Buttons;
+using BotEngine.Technical;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,15 +11,30 @@ namespace BotEngine.Nodes
 {
     public abstract class Node
     {
-        public List<Button> Buttons { get; protected set; } = new List<Button>();
-        public string Text { get; protected set; } = string.Empty;
-        public int? MessageId { get; protected set; }
+        internal List<Button> Buttons { get; set; } = new List<Button>();
+        internal string Text { get; set; } = string.Empty;
+        internal int? MessageId { get; set; }
 
-        public string NextIdentificator { get; protected set; } = string.Empty;
-        public string[] NextData { get; protected set; }
+        internal string NextIdentificator { get; set; } = string.Empty;
+        internal string[] NextData { get; set; }
 
-        public bool IsNeedProlongedIteration => NextIdentificator != string.Empty;
+        protected INodeInvokeResult RedirectToAnotherNode(string identificator, string[] data = null)
+        {
+            NextIdentificator = identificator;
+            NextData = data ?? [];
+
+            return new ProlongedNode();
+        }
+
+        protected INodeInvokeResult CompleteProcess(string text, List<Button> buttons = null)
+        {
+            Text = text;
+            Buttons = buttons ?? new List<Button>();
+
+            return new CompletedNode();
+        }
+
         public abstract string[] GetIdentificators();
-        public abstract Task Invoke(MessageInput input);
+        public abstract Task<INodeInvokeResult> Invoke(MessageInput input);
     }
 }

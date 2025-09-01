@@ -55,8 +55,8 @@ namespace BotEngine
 
             if (Activator.CreateInstance(nodeType) is Node node)
             {
-                await node.Invoke(message);
-                if (node.IsNeedProlongedIteration)
+                string result = (await node.Invoke(message)).Result;
+                if (result == "Prolonged")
                 {
                     return await GetNode(new NextMessageContext(node.NextIdentificator, node.NextData));
                 }
