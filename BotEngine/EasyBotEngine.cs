@@ -60,6 +60,10 @@ namespace BotEngine
                 {
                     return await GetNode(new NextMessageContext(node.NextIdentificator, node.NextData));
                 }
+                else if (result == "Interrupted")
+                {
+                    return null;
+                }
                 return node;
             }
 

@@ -18,20 +18,27 @@ namespace BotEngine.Nodes
         internal string NextIdentificator { get; set; } = string.Empty;
         internal string[] NextData { get; set; }
 
-        protected INodeInvokeResult RedirectToAnotherNode(string identificator, string[] data = null)
+        protected INodeInvokeResult RedirectToAnotherNode(string identificator, string[] data = null, int? messageId = null)
         {
             NextIdentificator = identificator;
             NextData = data ?? [];
+            MessageId = messageId ?? null;
 
             return new ProlongedNode();
         }
 
-        protected INodeInvokeResult CompleteProcess(string text, List<Button> buttons = null)
+        protected INodeInvokeResult CompleteProcess(string text, List<Button> buttons = null, int? messageId = null)
         {
             Text = text;
             Buttons = buttons ?? new List<Button>();
+            MessageId = messageId ?? null;
 
             return new CompletedNode();
+        }
+
+        protected INodeInvokeResult InterruptProcess()
+        {
+            return new InterruptedNode();
         }
 
         public abstract string[] GetIdentificators();
