@@ -1,21 +1,21 @@
-﻿using BotEngine.Domain;
-using BotEngine.Nodes;
-using BotEngine.Technical;
+﻿using BotEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Test.TestNodes.Datas;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Test.TestNodes
 {
-    internal class EndNode: Node
+    internal class EndNode: Node<DataBuffer>
     {
         public override string[] GetIdentificators() => ["End"];
-        public override async Task<INodeInvokeResult> Invoke(MessageInput message)
+        public override async Task<INodeResult<DataBuffer>> Invoke(DataBuffer input, CancellationToken? token)
         {
-            return CompleteProcess("Goodbye");
+            input.Text = "Goodbye";
+            return Complete(input);
         }
     }
 }

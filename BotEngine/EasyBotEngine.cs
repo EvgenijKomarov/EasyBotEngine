@@ -1,73 +1,74 @@
-﻿using BotEngine.Domain;
-using BotEngine.InputMessages;
-using BotEngine.Nodes;
-using BotEngine.OutputMessage;
+﻿using BotEngine.Exceptions;
+using BotEngine.NodeResults;
 
 namespace BotEngine
 {
-    public class EasyBotEngine
+    /// <summary>
+    /// Business logic engine
+    /// </summary>
+    /// <typeparam name="TInput">Input data</typeparam>
+    /// <typeparam name="TBuffer">Data that crawls between nodes</typeparam>
+    /// <typeparam name="TOutput">Result of the process</typeparam>
+    public class EasyBotEngine<TInput, TBuffer, TOutput>
+        where TInput : notnull 
+        where TBuffer : notnull
+        where TOutput : notnull
     {
-        private Dictionary<Type, string[]> _nodeValidators = new Dictionary<Type, string[]>();
-        protected Type defaultNodeType = typeof(DefaultNode);
+        private Func<TInput, TBuffer> inputToBuffer;
+        private Func<TBuffer, TOutput> bufferToOutput;
 
-        public EasyBotEngine(Type defaultNodeType)
+        private Dictionary<string, Node<TBuffer>> _nodes = new Dictionary<string, Node<TBuffer>>();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mapInputToBuffer">How to map input data into data buffer</param>
+        /// <param name="mapBufferToOutput">How to map data buffer into output data</param>
+        public EasyBotEngine(Func<TInput, TBuffer> mapInputToBuffer, Func<TBuffer, TOutput> mapBufferToOutput)
         {
-            this.defaultNodeType = defaultNodeType ?? throw new ArgumentNullException(nameof(defaultNodeType));
-
-            if (!typeof(Node).IsAssignableFrom(defaultNodeType))
-                throw new ArgumentException($"Type {defaultNodeType.Name} must inherit from Node");
+            inputToBuffer = mapInputToBuffer;
+            bufferToOutput = mapBufferToOutput;
         }
-        public EasyBotEngine() { }
 
-        public EasyBotEngine AddNode<T>() where T : Node, new()
+        /// <summary>
+        /// Use this method to add nodes to engine
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        /// <exception cref="NodeAlreadyExistsException">Node with the same id already exists</exception>
+        public EasyBotEngine<TInput, TBuffer, TOutput> AddNode(Node<TBuffer> node)
         {
-            var nodeType = typeof(T);
-            var tempNode = new T();
-            _nodeValidators[nodeType] = tempNode.GetIdentificators();
+            foreach(string id in node.GetIdentificators())
+            {
+                if(!_nodes.TryAdd(id, node)) { throw new NodeAlreadyExistsException(); }
+            }
             return this;
         }
-
-        public async Task<Message?> ProcessMessage(MessageInput message)
+        /// <summary>
+        /// Use this method to process data
+        /// </summary>
+        /// <param name="nodeIndex">Index of node</param>
+        /// <param name="input">Input data</param>
+        /// <param name="token"></param>
+        /// <returns>Output data</returns>
+        public async Task<TOutput> Process(string nodeIndex, TInput input, CancellationToken? token = null)
         {
-            var node = await GetNode(message);
-            return node != null ? new Message
-            {
-                Text = node.Text,
-                Buttons = node.Buttons,
-                MessageId = node.MessageId
-            } : null;
+            TBuffer dataResult = await GetNode(new ProlongedNode<TBuffer>(nodeIndex, inputToBuffer(input)));
+            return bufferToOutput(dataResult);
         }
 
-        private async Task<Node?> GetNode(MessageInput message)
+        private async Task<TBuffer> GetNode(INodeResult<TBuffer> input, CancellationToken? token = null)
         {
-            Type nodeType = null;
-
-            foreach (var kvp in _nodeValidators)
+            INodeResult<TBuffer> current = input;
+            while (current.NextNode != null)
             {
-                if (kvp.Value.Contains(message.GetIdentificator()))
+                if(_nodes.TryGetValue(current.NextNode, out Node<TBuffer> node))
                 {
-                    nodeType = kvp.Key;
-                    break;
+                    current = await node.Invoke(current.Object, token);
                 }
+                else { throw new NodeNotFoundException(); }
             }
-
-            nodeType = nodeType ?? defaultNodeType;
-
-            if (Activator.CreateInstance(nodeType) is Node node)
-            {
-                string result = (await node.Invoke(message)).Result;
-                if (result == "Prolonged")
-                {
-                    return await GetNode(new NextMessageContext(node.NextIdentificator, node.NextData));
-                }
-                else if (result == "Interrupted")
-                {
-                    return null;
-                }
-                return node;
-            }
-
-            return null;
+            return current.Object;
         }
     }
 }

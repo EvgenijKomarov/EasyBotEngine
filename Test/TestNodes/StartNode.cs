@@ -1,26 +1,26 @@
-﻿using BotEngine.Domain;
-using BotEngine.Nodes;
-using BotEngine.Technical;
+﻿using BotEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Test.TestNodes.Datas;
 
 namespace Test.TestNodes
 {
-    internal class StartNode: Node
+    internal class StartNode: Node<DataBuffer>
     {
         public override string[] GetIdentificators() => ["Text"];
-        public override async Task<INodeInvokeResult> Invoke(MessageInput message)
+        public override async Task<INodeResult<DataBuffer>> Invoke(DataBuffer input, CancellationToken? token)
         {
-            if (message.GetData()[0] == "End") 
+            if (input.Text == "End") 
             {
-                return RedirectToAnotherNode("End");
+                return Next("End", input);
             }
             else
             {
-                return CompleteProcess("Welcome");
+                input.Text = "Welcome";
+                return Complete(input);
             }
         }
     }
