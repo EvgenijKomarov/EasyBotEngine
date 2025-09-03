@@ -9,7 +9,7 @@ namespace BotEngine
     /// <typeparam name="TInput">Input data</typeparam>
     /// <typeparam name="TBuffer">Data that crawls between nodes</typeparam>
     /// <typeparam name="TOutput">Result of the process</typeparam>
-    public class EasyBotEngine<TInput, TBuffer, TOutput>
+    public class EasyEngine<TInput, TBuffer, TOutput>
         where TInput : notnull 
         where TBuffer : notnull
         where TOutput : notnull
@@ -18,13 +18,14 @@ namespace BotEngine
         private Func<TBuffer, TOutput> bufferToOutput;
 
         private Dictionary<string, Node<TBuffer>> _nodes = new Dictionary<string, Node<TBuffer>>();
+        private List<Middleware<TBuffer>> _middlewares = new List<Middleware<TBuffer>>();
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="mapInputToBuffer">How to map input data into data buffer</param>
         /// <param name="mapBufferToOutput">How to map data buffer into output data</param>
-        public EasyBotEngine(Func<TInput, TBuffer> mapInputToBuffer, Func<TBuffer, TOutput> mapBufferToOutput)
+        public EasyEngine(Func<TInput, TBuffer> mapInputToBuffer, Func<TBuffer, TOutput> mapBufferToOutput)
         {
             inputToBuffer = mapInputToBuffer;
             bufferToOutput = mapBufferToOutput;
@@ -36,7 +37,7 @@ namespace BotEngine
         /// <param name="node"></param>
         /// <returns></returns>
         /// <exception cref="NodeAlreadyExistsException">Node with the same id already exists</exception>
-        public EasyBotEngine<TInput, TBuffer, TOutput> AddNode(Node<TBuffer> node)
+        public EasyEngine<TInput, TBuffer, TOutput> AddNode(Node<TBuffer> node)
         {
             foreach(string id in node.GetIdentificators())
             {
@@ -44,6 +45,18 @@ namespace BotEngine
             }
             return this;
         }
+
+        /// <summary>
+        /// Use this method to add middlewares to engine
+        /// </summary>
+        /// <param name="middleware"></param>
+        /// <returns></returns>
+        public EasyEngine<TInput, TBuffer, TOutput> AddMiddleware(Middleware<TBuffer> middleware)
+        {
+            _middlewares.Add(middleware);
+            return this;
+        }
+
         /// <summary>
         /// Use this method to process data
         /// </summary>
@@ -53,13 +66,24 @@ namespace BotEngine
         /// <returns>Output data</returns>
         public async Task<TOutput> Process(string nodeIndex, TInput input, CancellationToken? token = null)
         {
-            TBuffer dataResult = await GetNode(new ProlongedNode<TBuffer>(nodeIndex, inputToBuffer(input)));
+            TBuffer dataResult = await Crawl(nodeIndex, inputToBuffer(input), token);
             return bufferToOutput(dataResult);
         }
 
-        private async Task<TBuffer> GetNode(INodeResult<TBuffer> input, CancellationToken? token = null)
+        private async Task<TBuffer> Crawl(string index, TBuffer input, CancellationToken? token = null)
         {
-            INodeResult<TBuffer> current = input;
+            INodeResult<TBuffer> current = new CompletedNode<TBuffer>(input);
+            foreach (var mid in _middlewares)
+            {
+                if (await mid.GetCondition(current.Object))
+                {
+                    current = await mid.Invoke(current.Object, token);
+                    if (current.NextNode != null) { break; }
+                }
+            }
+
+            if(current.NextNode == null) { current = new ProlongedNode<TBuffer>(index, current.Object); }
+
             while (current.NextNode != null)
             {
                 if(_nodes.TryGetValue(current.NextNode, out Node<TBuffer> node))

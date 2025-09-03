@@ -6,12 +6,12 @@ namespace Test
 {
     public class Tests
     {
-        EasyBotEngine<InputData, DataBuffer, OutputData> engine;
+        EasyEngine<InputData, DataBuffer, OutputData> engine;
 
         [SetUp]
         public void Setup()
         {
-            engine = new EasyBotEngine<InputData, DataBuffer, OutputData>(
+            engine = new EasyEngine<InputData, DataBuffer, OutputData>(
                 x => new DataBuffer { 
                     MessageId = x.MessageId.ToString(),
                     Text = x.Text,
