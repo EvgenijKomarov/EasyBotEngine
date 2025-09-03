@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BotEngine\BotEngine.csproj" />
+    <ProjectReference Include="..\BotEngine\Engine.csproj" />
   </ItemGroup>
 
   <ItemGroup>

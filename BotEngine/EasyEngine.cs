@@ -1,10 +1,10 @@
-﻿using BotEngine.Exceptions;
-using BotEngine.NodeResults;
+﻿using Engine.Exceptions;
+using Engine.NodeResults;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 
-namespace BotEngine
+namespace Engine
 {
     /// <summary>
     /// Business logic engine

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BotEngine.NodeResults
+namespace Engine.NodeResults
 {
     internal class CompletedNode<TBuffer>(TBuffer obj) : INodeResult<TBuffer>
     {

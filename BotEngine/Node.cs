@@ -1,11 +1,11 @@
-﻿using BotEngine.NodeResults;
+﻿using Engine.NodeResults;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BotEngine
+namespace Engine
 {
     /// <summary>
     /// Entities that crawled by engine

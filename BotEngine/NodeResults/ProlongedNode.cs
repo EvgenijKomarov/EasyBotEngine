@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BotEngine.NodeResults
+namespace Engine.NodeResults
 {
     internal class ProlongedNode<TBuffer>(string nextNode, TBuffer obj) : INodeResult<TBuffer>
     {

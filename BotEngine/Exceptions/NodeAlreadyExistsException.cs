@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BotEngine.Exceptions
+namespace Engine.Exceptions
 {
     public class NodeAlreadyExistsException : Exception
     {
