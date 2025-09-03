@@ -1,4 +1,5 @@
 using BotEngine;
+using Microsoft.Extensions.Logging;
 using Test.TestNodes;
 using Test.TestNodes.Datas;
 
@@ -19,12 +20,13 @@ namespace Test
                 },
                 x => new OutputData
                 {
-                    MessageId = int.Parse(x.MessageId),
+                    MessageId = int.TryParse(x.MessageId, out int mesId) ? mesId : 0,
                     Text = x.Text,
-                    UserId = int.Parse(x.UserId)
+                    UserId = int.TryParse(x.UserId, out int usId) ? usId : 0
                 });
             engine.AddNode(new StartNode());
             engine.AddNode(new EndNode());
+            engine.AddMiddleware(new DefaultMiddleware());
         }
 
         [Test]
@@ -53,6 +55,20 @@ namespace Test
             var mes = await engine.Process("Text", input);
 
             Assert.That(mes.Text == "Goodbye" && mes.UserId.ToString() == input.UserId && mes.MessageId == input.MessageId);
+        }
+
+        [Test]
+        public async Task Test3()
+        {
+            var input = new InputData
+            {
+                MessageId = 1,
+                Text = "Hello",
+                UserId = string.Empty
+            };
+            var mes = await engine.Process("Text", input);
+
+            Assert.That(mes.Text == "Goodbye" && mes.MessageId == input.MessageId);
         }
     }
 }
