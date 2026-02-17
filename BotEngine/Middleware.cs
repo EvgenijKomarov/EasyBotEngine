@@ -12,10 +12,10 @@ namespace Engine
         /// <summary>
         /// Return this to get to the node
         /// </summary>
-        /// <param name="nextNode"></param>
+        /// <typeparam name="TNextNode">Next node type</typeparam>
         /// <param name="obj"></param>
         /// <returns></returns>
-        protected INodeResult<TBuffer> MoveToNode(string nextNode, TBuffer obj) => new ProlongedNode<TBuffer>(nextNode, obj);
+        protected INodeResult<TBuffer> RedirectToNode<TNextNode>(TBuffer obj) => new ProlongedNode<TBuffer>(typeof(TNextNode), obj);
 
         /// <summary>
         /// Return this to complete middleware

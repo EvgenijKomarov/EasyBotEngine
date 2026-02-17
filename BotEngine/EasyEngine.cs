@@ -1,8 +1,10 @@
 ﻿using Engine.Exceptions;
 using Engine.NodeResults;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Engine
 {
@@ -21,20 +23,24 @@ namespace Engine
         private Func<TBuffer, TOutput> bufferToOutput;
         private readonly ILogger<EasyEngine<TInput, TBuffer, TOutput>>? _logger;
 
-        private Dictionary<string, Node<TBuffer>> _nodes = new Dictionary<string, Node<TBuffer>>();
-        private List<Middleware<TBuffer>> _middlewares = new List<Middleware<TBuffer>>();
+        private HashSet<Type> _nodeTypes = new HashSet<Type>();
+        private HashSet<Type> _middlewareTypes = new HashSet<Type>();
+        private readonly IServiceProvider _serviceProvider;
 
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="serviceProvider">Service provider for DI</param>
         /// <param name="mapInputToBuffer">How to map input data into data buffer</param>
         /// <param name="mapBufferToOutput">How to map data buffer into output data</param>
         /// <param name="logger">Logger instance (optional)</param>
         public EasyEngine(
+            IServiceProvider serviceProvider,
             Func<TInput, TBuffer> mapInputToBuffer,
             Func<TBuffer, TOutput> mapBufferToOutput,
             ILogger<EasyEngine<TInput, TBuffer, TOutput>>? logger = null)
         {
+            _serviceProvider = serviceProvider;
             inputToBuffer = mapInputToBuffer;
             bufferToOutput = mapBufferToOutput;
             _logger = logger;
@@ -43,37 +49,35 @@ namespace Engine
         /// <summary>
         /// Use this method to add nodes to engine
         /// </summary>
-        /// <param name="node"></param>
+        /// <typeparam name="TNode">Node to add</typeparam>
         /// <returns></returns>
         /// <exception cref="NodeAlreadyExistsException">Node with the same id already exists</exception>
-        public EasyEngine<TInput, TBuffer, TOutput> AddNode(Node<TBuffer> node)
+        public EasyEngine<TInput, TBuffer, TOutput> AddNode<TNode>() where TNode : Node<TBuffer>
         {
-            foreach (string id in node.GetIdentificators())
-            {
-                if (!_nodes.TryAdd(id, node)) { throw new NodeAlreadyExistsException(); }
-            }
+            _nodeTypes.Add(typeof(TNode));
+
             return this;
         }
 
         /// <summary>
         /// Use this method to add middlewares to engine
         /// </summary>
-        /// <param name="middleware"></param>
+        /// <typeparam name="TMiddleware"></typeparam>
         /// <returns></returns>
-        public EasyEngine<TInput, TBuffer, TOutput> AddMiddleware(Middleware<TBuffer> middleware)
+        public EasyEngine<TInput, TBuffer, TOutput> AddMiddleware<TMiddleware>() where TMiddleware : Middleware<TBuffer>
         {
-            _middlewares.Add(middleware);
+            _middlewareTypes.Add(typeof(TMiddleware));
             return this;
         }
 
         /// <summary>
         /// Use this method to process data
         /// </summary>
-        /// <param name="nodeIndex">Index of node</param>
+        /// <param name="endpointNode">Entry node</param>
         /// <param name="input">Input data</param>
         /// <param name="token"></param>
         /// <returns>Output data</returns>
-        public async Task<TOutput?> Process(string nodeIndex, TInput input, CancellationToken? token = null)
+        public async Task<TOutput?> Process(Type endpointNode, TInput input, CancellationToken? token = null)
         {
             var stopwatch = Stopwatch.StartNew();
             var executionChain = new List<string>();
@@ -82,9 +86,9 @@ namespace Engine
 
             try
             {
-                _logger?.LogDebug("Starting process with node: {NodeIndex}", nodeIndex);
+                _logger?.LogDebug("Starting process with node: {NodeIndex}", endpointNode);
 
-                TBuffer dataResult = await Crawl(nodeIndex, inputToBuffer(input), token, executionChain);
+                TBuffer dataResult = await Crawl(endpointNode, inputToBuffer(input), token, executionChain);
                 result = bufferToOutput(dataResult);
             }
             catch (Exception ex)
@@ -95,64 +99,66 @@ namespace Engine
             finally
             {
                 stopwatch.Stop();
-                LogExecutionSummary(nodeIndex, stopwatch.Elapsed, executionChain, exception);
+                LogExecutionSummary(endpointNode, stopwatch.Elapsed, executionChain, exception);
             }
 
             return result;
         }
 
-        private async Task<TBuffer> Crawl(string index, TBuffer input, CancellationToken? token, List<string> executionChain)
+        private async Task<TBuffer> Crawl(Type endpointNode, TBuffer input, CancellationToken? token, List<string> executionChain)
         {
             INodeResult<TBuffer> current = new CompletedNode<TBuffer>(input);
 
             // Обработка middleware
-            foreach (var mid in _middlewares)
+            foreach (var middlewareType in _middlewareTypes)
             {
-                if (await mid.GetCondition(current.Object, token ?? CancellationToken.None))
-                {
-                    current = await mid.Invoke(current.Object, token);
+                var middleware =
+                    (Middleware<TBuffer>)
+                    _serviceProvider.GetRequiredService(middlewareType);
 
-                    _logger?.LogDebug("Middleware executed: {MiddlewareType}", mid.GetType().Name);
-                    executionChain.Add($"Middleware: {mid.GetType().Name}");
+                if (await middleware.GetCondition(current.Object, token))
+                {
+                    current =
+                        await middleware.Invoke(current.Object, token);
+
+                    executionChain.Add(
+                        $"Middleware: {middlewareType.Name}");
 
                     if (current.NextNode != null)
-                    {
-                        _logger?.LogDebug("Middleware redirected to node: {NextNode}", current.NextNode);
                         break;
-                    }
                 }
             }
 
             if (current.NextNode == null)
             {
-                current = new ProlongedNode<TBuffer>(index, current.Object);
+                if (!_nodeTypes.Contains(endpointNode))
+                    throw new NodeNotFoundException();
+                current = new ProlongedNode<TBuffer>(endpointNode, current.Object);
             }
 
             // Обработка узлов
             while (current.NextNode != null)
             {
-                if (_nodes.TryGetValue(current.NextNode, out Node<TBuffer> node))
-                {
-                    _logger?.LogDebug("Executing node: {NodeType} ({NodeId})", node.GetType().Name, current.NextNode);
-                    executionChain.Add($"Node: {node.GetType().Name}");
+                var nodeType = current.NextNode;
 
-                    current = await node.Invoke(current.Object, token);
-
-                    _logger?.LogDebug("Node {NodeType} completed. Next: {NextNode}",
-                        node.GetType().Name, current.NextNode ?? "COMPLETED");
-                }
-                else
-                {
-                    _logger?.LogError("Node not found: {NodeId}", current.NextNode);
+                if (!_nodeTypes.Contains(nodeType))
                     throw new NodeNotFoundException();
-                }
+
+                var node =
+                    (Node<TBuffer>)
+                    _serviceProvider.GetRequiredService(nodeType);
+
+                current =
+                    await node.Invoke(
+                        current.Object,
+                        token);
             }
 
             return current.Object;
         }
 
         private void LogExecutionSummary(
-            string startNode,
+            Type startNode,
             TimeSpan duration,
             List<string> executionChain,
             Exception? exception)

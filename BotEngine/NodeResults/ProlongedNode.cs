@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Engine.NodeResults
 {
-    internal class ProlongedNode<TBuffer>(string nextNode, TBuffer obj) : INodeResult<TBuffer>
+    internal class ProlongedNode<TBuffer>(Type nextNode, TBuffer obj) : INodeResult<TBuffer>
     {
-        public string NextNode { get; } = nextNode;
+        public Type NextNode { get; } = nextNode;
         public TBuffer Object => obj;
     }
 }

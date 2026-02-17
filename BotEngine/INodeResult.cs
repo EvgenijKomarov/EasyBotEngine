@@ -9,6 +9,6 @@ namespace Engine
     public interface INodeResult<TBuffer>
     {
         public TBuffer Object { get; }
-        public string NextNode { get; }
+        public Type? NextNode { get; }
     }
 }

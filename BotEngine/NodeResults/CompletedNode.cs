@@ -8,7 +8,7 @@ namespace Engine.NodeResults
 {
     internal class CompletedNode<TBuffer>(TBuffer obj) : INodeResult<TBuffer>
     {
-        public string NextNode { get; } = null;
+        public Type? NextNode { get; } = null;
         public TBuffer Object => obj;
     }
 }

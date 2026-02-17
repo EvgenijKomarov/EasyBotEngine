@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Engine
 {
@@ -16,10 +17,10 @@ namespace Engine
         /// <summary>
         /// Return this to get to the next node
         /// </summary>
-        /// <param name="nextNode"></param>
-        /// <param name="obj"></param>
+        /// <typeparam name="TNextNode">Next node type</typeparam>
+        /// <param name="obj">Buffer</param>
         /// <returns></returns>
-        protected INodeResult<TBuffer> Next(string nextNode, TBuffer obj) => new ProlongedNode<TBuffer>(nextNode, obj);
+        protected INodeResult<TBuffer> Next<TNextNode>(TBuffer obj) => new ProlongedNode<TBuffer>(typeof(TNextNode), obj);
 
         /// <summary>
         /// Return this to complete process
@@ -27,12 +28,6 @@ namespace Engine
         /// <param name="obj"></param>
         /// <returns></returns>
         protected INodeResult<TBuffer> Complete(TBuffer obj) => new CompletedNode<TBuffer>(obj);
-
-        /// <summary>
-        /// Identificators of node
-        /// </summary>
-        /// <returns></returns>
-        public abstract string[] GetIdentificators();
 
         /// <summary>
         /// Operation that invoked inside node to process data buffer
