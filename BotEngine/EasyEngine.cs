@@ -23,7 +23,6 @@ namespace Engine
         private Func<TBuffer, TOutput> bufferToOutput;
         private readonly ILogger<EasyEngine<TInput, TBuffer, TOutput>>? _logger;
 
-        private HashSet<Type> _nodeTypes = new HashSet<Type>();
         private HashSet<Type> _middlewareTypes = new HashSet<Type>();
         private readonly IServiceProvider _serviceProvider;
 
@@ -44,19 +43,6 @@ namespace Engine
             inputToBuffer = mapInputToBuffer;
             bufferToOutput = mapBufferToOutput;
             _logger = logger;
-        }
-
-        /// <summary>
-        /// Use this method to add nodes to engine
-        /// </summary>
-        /// <typeparam name="TNode">Node to add</typeparam>
-        /// <returns></returns>
-        /// <exception cref="NodeAlreadyExistsException">Node with the same id already exists</exception>
-        public EasyEngine<TInput, TBuffer, TOutput> AddNode<TNode>() where TNode : Node<TBuffer>
-        {
-            _nodeTypes.Add(typeof(TNode));
-
-            return this;
         }
 
         /// <summary>
@@ -131,22 +117,13 @@ namespace Engine
 
             if (current.NextNode == null)
             {
-                if (!_nodeTypes.Contains(endpointNode))
-                    throw new NodeNotFoundException();
                 current = new ProlongedNode<TBuffer>(endpointNode, current.Object);
             }
 
             // Обработка узлов
             while (current.NextNode != null)
             {
-                var nodeType = current.NextNode;
-
-                if (!_nodeTypes.Contains(nodeType))
-                    throw new NodeNotFoundException();
-
-                var node =
-                    (Node<TBuffer>)
-                    _serviceProvider.GetRequiredService(nodeType);
+                Node<TBuffer> node = GetNode(current.NextNode);
 
                 current =
                     await node.Invoke(
@@ -155,6 +132,11 @@ namespace Engine
             }
 
             return current.Object;
+        }
+
+        private Node<TBuffer> GetNode(Type nodeType)
+        {
+            return (Node<TBuffer>)_serviceProvider.GetRequiredService(nodeType);
         }
 
         private void LogExecutionSummary(

@@ -20,7 +20,8 @@ namespace Engine
         /// <typeparam name="TNextNode">Next node type</typeparam>
         /// <param name="obj">Buffer</param>
         /// <returns></returns>
-        protected INodeResult<TBuffer> Next<TNextNode>(TBuffer obj) => new ProlongedNode<TBuffer>(typeof(TNextNode), obj);
+        protected INodeResult<TBuffer> Next<TNextNode>(TBuffer obj) where TNextNode : Node<TBuffer>
+            => new ProlongedNode<TBuffer>(typeof(TNextNode), obj);
 
         /// <summary>
         /// Return this to complete process

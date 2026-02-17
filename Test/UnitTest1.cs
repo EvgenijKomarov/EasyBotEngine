@@ -11,7 +11,9 @@ namespace EngineTests;
 [TestFixture]
 public class EasyEngineTests
 {
+#pragma warning disable NUnit1032 // An IDisposable field/property should be Disposed in a TearDown method
     private ServiceProvider _provider;
+#pragma warning restore NUnit1032 // An IDisposable field/property should be Disposed in a TearDown method
 
     [SetUp]
     public void Setup()
@@ -45,11 +47,6 @@ public class EasyEngineTests
     {
         var engine = CreateEngine();
 
-        engine
-            .AddNode<StartNode>()
-            .AddNode<SecondNode>()
-            .AddNode<FinalNode>();
-
         var result =
             await engine.Process(
                 typeof(StartNode),
@@ -70,11 +67,7 @@ public class EasyEngineTests
     {
         var engine = CreateEngine();
 
-        engine
-            .AddNode<StartNode>()
-            .AddNode<SecondNode>()
-            .AddNode<FinalNode>()
-            .AddMiddleware<TestMiddleware>();
+        engine.AddMiddleware<TestMiddleware>();
 
         var result =
             await engine.Process(
@@ -106,8 +99,6 @@ public class EasyEngineTests
                 provider,
                 x => new TestBuffer { Value = x },
                 x => x.Value);
-
-        engine.AddNode<EarlyCompleteNode>();
 
         var result =
             await engine.Process(
@@ -143,8 +134,6 @@ public class EasyEngineTests
                 provider,
                 x => new TestBuffer { Value = x },
                 x => x.Value);
-
-        engine.AddNode<CounterNode>();
 
         await engine.Process(
             typeof(CounterNode),
