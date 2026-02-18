@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace Engine
 {
-    public interface INodeResult<TBuffer>
+    public interface INodeResult<TBuffer, TOutput>
     {
         public TBuffer Object { get; }
+        public TOutput Output { get; }
         public Type? NextNode { get; }
     }
 }

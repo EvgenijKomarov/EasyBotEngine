@@ -8,6 +8,6 @@ namespace Engine.Exceptions
 {
     public class NodeNotFoundException : Exception
     {
-        public NodeNotFoundException() : base("Node not found or not registered") { }
+        public NodeNotFoundException(Type nodeType) : base($"Node {nodeType.Name} not found or not registered") { }
     }
 }

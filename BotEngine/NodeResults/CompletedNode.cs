@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace Engine.NodeResults
 {
-    internal class CompletedNode<TBuffer>(TBuffer obj) : INodeResult<TBuffer>
+    internal class CompletedNode<TBuffer, TOutput>(TOutput obj) : INodeResult<TBuffer, TOutput>
     {
         public Type? NextNode { get; } = null;
-        public TBuffer Object => obj;
+        public TOutput Output => obj;
+        public TBuffer Object { get; } = default(TBuffer);
     }
 }
