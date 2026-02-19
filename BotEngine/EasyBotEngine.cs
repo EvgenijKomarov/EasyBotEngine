@@ -215,6 +215,7 @@ namespace Engine
             if (_logger == null) return;
 
             var sb = new StringBuilder();
+            sb.AppendLine();
             sb.AppendLine("=== Execution Summary ===");
             sb.AppendLine($"Start Node: {startNodeId}");
             sb.AppendLine($"Duration: {duration.TotalMilliseconds}ms");
