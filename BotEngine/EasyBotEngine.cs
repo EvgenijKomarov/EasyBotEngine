@@ -222,7 +222,6 @@ namespace Engine
             if (_logger == null) return;
 
             var sb = new StringBuilder();
-            sb.AppendLine("\n");
             sb.AppendLine("=== Execution Summary ===");
             sb.AppendLine($"Start Node: {startNode}");
             sb.AppendLine($"Duration: {duration.TotalMilliseconds}ms");
@@ -248,7 +247,7 @@ namespace Engine
                 }
             }
 
-            sb.AppendLine("========================\n");
+            sb.AppendLine("========================");
 
             if (exception == null)
             {
