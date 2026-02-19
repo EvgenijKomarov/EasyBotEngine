@@ -23,7 +23,7 @@ namespace Engine.Nodes
         /// <typeparam name="TNextNode">Next node type</typeparam>
         /// <param name="obj">Buffer</param>
         /// <returns></returns>
-        protected NodeResult<TBuffer, TOutput> Next<TNextNode>(TBuffer obj) where TNextNode : Node<TBuffer, TOutput>
+        protected INodeResult<TBuffer, TOutput> Next<TNextNode>(TBuffer obj) where TNextNode : Node<TBuffer, TOutput>
             => new ProlongedNode<TBuffer, TOutput>(typeof(TNextNode), obj);
 
         /// <summary>
@@ -31,7 +31,7 @@ namespace Engine.Nodes
         /// </summary>
         /// <param name="obj">Result of the process</param>
         /// <returns></returns>
-        protected NodeResult<TBuffer, TOutput> Complete(TOutput obj) => new CompletedNode<TBuffer, TOutput>(obj);
+        protected INodeResult<TBuffer, TOutput> Complete(TOutput obj) => new CompletedNode<TBuffer, TOutput>(obj);
 
         /// <summary>
         /// Operation that invoked inside node to process data buffer
@@ -39,6 +39,6 @@ namespace Engine.Nodes
         /// <param name="input">Data that uses in node</param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public abstract Task<NodeResult<TBuffer, TOutput>> Invoke(TBuffer input, CancellationToken? token = null);
+        public abstract Task<INodeResult<TBuffer, TOutput>> Invoke(TBuffer input, CancellationToken? token = null);
     }
 }

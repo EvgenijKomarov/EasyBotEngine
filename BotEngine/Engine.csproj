@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
 	  
 	<PackageId>EasyBotEngine</PackageId>
-	<Version>8.2.0</Version>
-	<VersionPrefix>8.2.0</VersionPrefix>
+	<Version>8.2.1</Version>
+	<VersionPrefix>8.2.1</VersionPrefix>
 	<VersionSuffix>$([System.DateTime]::Now.ToString(`yyyyMMdd-HHmm`))</VersionSuffix>
 	<Authors>Evgenij Komarov</Authors>
 	<Description>

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Engine.NodeResults
 {
-    internal class ProlongedNode<TBuffer, TOutput>(Type nextNode, TBuffer obj) : NodeResult<TBuffer, TOutput>
+    internal class ProlongedNode<TBuffer, TOutput>(Type nextNode, TBuffer obj) : INodeResult<TBuffer, TOutput>
     {
         public Type NextNode { get; } = nextNode;
         public TOutput Output { get; } = default(TOutput);

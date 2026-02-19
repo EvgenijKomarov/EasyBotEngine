@@ -116,7 +116,7 @@ namespace Engine
 
         private async Task<TOutput> Crawl(Type endpointNode, TBuffer input, CancellationToken? token, List<string> executionChain)
         {
-            NodeResult<TBuffer, TOutput> current = new MiddlewaredNode<TBuffer, TOutput>(input);
+            INodeResult<TBuffer, TOutput> current = new MiddlewaredNode<TBuffer, TOutput>(input);
 
             // Обработка middleware
             foreach (var middleware in GetMiddlewares())

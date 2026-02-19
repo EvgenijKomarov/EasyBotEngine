@@ -23,7 +23,7 @@ namespace Engine
         /// <typeparam name="TNextNode">Next node type</typeparam>
         /// <param name="obj">Buffer</param>
         /// <returns></returns>
-        protected NodeResult<TBuffer, TOutput> RedirectToNode<TNextNode>(TBuffer obj) 
+        protected INodeResult<TBuffer, TOutput> RedirectToNode<TNextNode>(TBuffer obj) 
             where TNextNode : Node<TBuffer, TOutput>
             => new ProlongedNode<TBuffer, TOutput>(typeof(TNextNode), obj);
 
@@ -32,14 +32,14 @@ namespace Engine
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        protected NodeResult<TBuffer, TOutput> Complete(TBuffer obj) => new MiddlewaredNode<TBuffer, TOutput>(obj);
+        protected INodeResult<TBuffer, TOutput> Complete(TBuffer obj) => new MiddlewaredNode<TBuffer, TOutput>(obj);
 
         /// <summary>
         /// Finish the whole processing with a final output from middleware
         /// </summary>
         /// <param name="output">Final output</param>
         /// <returns></returns>
-        protected NodeResult<TBuffer, TOutput> Finish(TOutput output) => new CompletedNode<TBuffer, TOutput>(output);
+        protected INodeResult<TBuffer, TOutput> Finish(TOutput output) => new CompletedNode<TBuffer, TOutput>(output);
 
         /// <summary>
         /// Conditions of middleware
@@ -53,6 +53,6 @@ namespace Engine
         /// <param name="input">Data that uses in middleware</param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public abstract Task<NodeResult<TBuffer, TOutput>> Invoke(TBuffer input, CancellationToken? token = null);
+        public abstract Task<INodeResult<TBuffer, TOutput>> Invoke(TBuffer input, CancellationToken? token = null);
     }
 }

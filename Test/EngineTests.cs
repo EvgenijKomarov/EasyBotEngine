@@ -42,7 +42,7 @@ public class TestInput : IEngineInput<TestBuffer>
 
 public class StartNode() : EndpointNode<TestBuffer, TestOutput>("start")
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -55,7 +55,7 @@ public class StartNode() : EndpointNode<TestBuffer, TestOutput>("start")
 // Обычная нода
 public class ProcessingNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -68,7 +68,7 @@ public class ProcessingNode : Node<TestBuffer, TestOutput>
 // Финальная нода
 public class FinalNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -84,7 +84,7 @@ public class FinalNode : Node<TestBuffer, TestOutput>
 // Нода с ветвлением
 public class BranchingNode() : EndpointNode<TestBuffer, TestOutput>("branching")
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -97,7 +97,7 @@ public class BranchingNode() : EndpointNode<TestBuffer, TestOutput>("branching")
 
 public class HighValueNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -113,7 +113,7 @@ public class HighValueNode : Node<TestBuffer, TestOutput>
 
 public class LowValueNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -144,7 +144,7 @@ public class ConditionalMiddleware : Middleware<TestBuffer, TestOutput>
         return Task.FromResult(input.Value > _threshold);
     }
 
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -164,7 +164,7 @@ public class AlwaysOnMiddleware : Middleware<TestBuffer, TestOutput>
         return Task.FromResult(true);
     }
 
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -184,7 +184,7 @@ public class ShortCircuitMiddleware : Middleware<TestBuffer, TestOutput>
         return Task.FromResult(input.Value % 2 == 0);
     }
 
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -203,7 +203,7 @@ public class ShortCircuitMiddleware : Middleware<TestBuffer, TestOutput>
 // Нода, бросающая исключение
 public class FailingNode() : EndpointNode<TestBuffer, TestOutput>("failing")
 {
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -215,7 +215,7 @@ public class FailingNode() : EndpointNode<TestBuffer, TestOutput>("failing")
 // Нода, реагирующая на отмену
 public class CancellableNode() : EndpointNode<TestBuffer, TestOutput>("cancellable")
 {
-    public override async Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override async Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -233,7 +233,7 @@ class CountingNode : EndpointNode<TestBuffer, TestOutput>
 
     public CountingNode(): base("counting") => InstanceCount++;
 
-    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -459,7 +459,7 @@ public class EasyBotEngineTests : EngineTestBase
     // Вспомогательная нода для теста выше
     private class InvalidNextNode() : EndpointNode<TestBuffer, TestOutput>("invalid")
     {
-        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
             TestBuffer input,
             CancellationToken? token = null)
         {
@@ -470,7 +470,7 @@ public class EasyBotEngineTests : EngineTestBase
 
     private class NonExistentNode : Node<TestBuffer, TestOutput>
     {
-        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
+        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
             TestBuffer input,
             CancellationToken? token = null) => throw new NotImplementedException();
     }
@@ -563,7 +563,7 @@ public class EasyBotEngineTests : EngineTestBase
     class FirstMiddleware : Middleware<TestBuffer, TestOutput>
     {
         public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
-        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
+        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] FirstMiddleware");
              input.Value += 10;
@@ -574,7 +574,7 @@ public class EasyBotEngineTests : EngineTestBase
     class SecondMiddleware : Middleware<TestBuffer, TestOutput>
     {
         public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
-        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
+        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] SecondMiddleware");
              input.Value += 20;

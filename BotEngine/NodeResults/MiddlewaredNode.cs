@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Engine.NodeResults
 {
-    internal class MiddlewaredNode<TBuffer, TOutput>(TBuffer obj) : NodeResult<TBuffer, TOutput>
+    internal class MiddlewaredNode<TBuffer, TOutput>(TBuffer obj) : INodeResult<TBuffer, TOutput>
     {
         public Type? NextNode { get; } = null;
         public TOutput Output { get; } = default(TOutput);

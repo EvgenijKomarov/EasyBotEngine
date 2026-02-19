@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Engine.NodeResults
 {
-    internal class CompletedNode<TBuffer, TOutput>(TOutput obj) : NodeResult<TBuffer, TOutput>
+    internal class CompletedNode<TBuffer, TOutput>(TOutput obj) : INodeResult<TBuffer, TOutput>
     {
         public Type? NextNode { get; } = null;
         public TOutput Output => obj;
