@@ -1,4 +1,5 @@
 ﻿using Engine.NodeResults;
+using Engine.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,7 @@ namespace Engine
     /// </summary>
     /// <typeparam name="TBuffer">Data buffer</typeparam>
     /// <typeparam name="TOutput">This entity exists only to ensure that engine can be injectet into engine</typeparam>
-    public abstract class Middleware<TBuffer, TOutput> 
+    public interface IMiddleware<TBuffer, TOutput> 
         where TBuffer : notnull
         where TOutput : notnull
     {
@@ -23,7 +24,7 @@ namespace Engine
         /// <param name="obj">Buffer</param>
         /// <returns></returns>
         protected INodeResult<TBuffer, TOutput> RedirectToNode<TNextNode>(TBuffer obj) 
-            where TNextNode : Node<TBuffer, TOutput>
+            where TNextNode : INode<TBuffer, TOutput>
             => new ProlongedNode<TBuffer, TOutput>(typeof(TNextNode), obj);
 
         /// <summary>

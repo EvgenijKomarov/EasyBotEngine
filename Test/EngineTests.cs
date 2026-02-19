@@ -1,6 +1,7 @@
 using Engine;
 using Engine.Exceptions;
 using Engine.Extensions;
+using Engine.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -310,7 +311,7 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<ConditionalMiddleware>();
-            services.AddTransient<Middleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
+            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
@@ -336,7 +337,7 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<ConditionalMiddleware>();
-            services.AddTransient<Middleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
+            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
@@ -363,7 +364,7 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<ShortCircuitMiddleware>();
-            services.AddTransient<Middleware<TestBuffer, TestOutput>, ShortCircuitMiddleware>();
+            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, ShortCircuitMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
@@ -457,7 +458,7 @@ public class EasyBotEngineTests : EngineTestBase
     }
 
     // Вспомогательная нода для теста выше
-    private class InvalidNextNode : EndpointNode<TestBuffer, TestOutput>
+    private class InvalidNextNode : IEndpointNode<TestBuffer, TestOutput>
     {
         public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
             TestBuffer input,
@@ -468,7 +469,7 @@ public class EasyBotEngineTests : EngineTestBase
         }
     }
 
-    private class NonExistentNode : Node<TestBuffer, TestOutput>
+    private class NonExistentNode : INode<TestBuffer, TestOutput>
     {
         public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
             TestBuffer input,
@@ -525,7 +526,7 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<CountingNode>();
-            services.AddTransient<Node<TestBuffer, TestOutput>, CountingNode>();
+            services.AddTransient<INode<TestBuffer, TestOutput>, CountingNode>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
@@ -559,10 +560,10 @@ public class EasyBotEngineTests : EngineTestBase
         {
             // Регистрируем мидлвары в определённом порядке
             services.AddTransient<FirstMiddleware>();
-            services.AddTransient<Middleware<TestBuffer, TestOutput>, FirstMiddleware>();
+            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, FirstMiddleware>();
 
             services.AddTransient<SecondMiddleware>();
-            services.AddTransient<Middleware<TestBuffer, TestOutput>, SecondMiddleware>();
+            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, SecondMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
@@ -585,10 +586,10 @@ public class EasyBotEngineTests : EngineTestBase
             Is.LessThan(input.Object.History.IndexOf("[MW] SecondMiddleware")));
     }
 
-    class FirstMiddleware : Middleware<TestBuffer, TestOutput>
+    class FirstMiddleware : IMiddleware<TestBuffer, TestOutput>
     {
-        public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
-        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
+        public Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
+        public Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] FirstMiddleware");
              input.Value += 10;
@@ -596,10 +597,10 @@ public class EasyBotEngineTests : EngineTestBase
         }
     }
 
-    class SecondMiddleware : Middleware<TestBuffer, TestOutput>
+    class SecondMiddleware : IMiddleware<TestBuffer, TestOutput>
     {
-        public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
-        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
+        public Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
+        public Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] SecondMiddleware");
              input.Value += 20;

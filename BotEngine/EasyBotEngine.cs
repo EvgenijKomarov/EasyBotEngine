@@ -1,11 +1,13 @@
 ﻿using Engine.Exceptions;
 using Engine.NodeResults;
+using Engine.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
-using System.Collections.Generic;
 
 namespace Engine
 {
@@ -41,32 +43,30 @@ namespace Engine
         }
 
         /// <summary>
-        /// Get all nodes from engine
+        /// Get all node types from engine
         /// </summary>
         /// <returns></returns>
-        public IReadOnlyList<Node<TBuffer, TOutput>> GetAllNodes()
+        public IReadOnlyList<Type> GetAllNodeTypes()
         {
-            return _serviceProvider.GetServices<Node<TBuffer, TOutput>>()
-                .Where(n => !typeof(EndpointNode<TBuffer, TOutput>).IsInstanceOfType(n))
-                .ToList();
+            return GetAllNodes().Select(x => x.GetType()).ToList();
         }
 
         /// <summary>
-        /// Get all endpoints nodes from engine
+        /// Get all endpoint node types from engine
         /// </summary>
         /// <returns></returns>
-        public IReadOnlyList<Node<TBuffer, TOutput>> GetEndpointNodes()
+        public IReadOnlyList<Type> GetEndpointNodeTypes()
         {
-            return _serviceProvider.GetServices<EndpointNode<TBuffer, TOutput>>().ToList();
+            return GetEndpointNodes().Select(x => x.GetType()).ToList();
         }
 
         /// <summary>
-        /// Get all middlewares from engine
+        /// Get all middleware types from engine
         /// </summary>
         /// <returns></returns>
-        public IReadOnlyList<Middleware<TBuffer, TOutput>> GetMiddlewares()
+        public IReadOnlyList<Type> GetMiddlewareTypes()
         {
-            return _serviceProvider.GetServices<Middleware<TBuffer, TOutput>>().ToList();
+            return GetMiddlewares().Select(x => x.GetType()).ToList();
         }
 
         /// <summary>
@@ -84,10 +84,10 @@ namespace Engine
 
             try
             {
-                if (!CheckEndpointNode(input.EndpointNode)) { throw new EndpointNodeNotFoundException(input.EndpointNode); }
-                _logger?.LogDebug("Starting process with node: {NodeIndex}", input.EndpointNode);
+                var endpointNode = GetEndpointNode(input.EndpointNodeId);
+                _logger?.LogDebug("Starting process with node: {NodeIndex}", input.EndpointNodeId);
 
-                result = await Crawl(input.EndpointNode, input.Object, token, executionChain);
+                result = await Crawl(endpointNode.GetType(), input.Object, token, executionChain);
             }
             catch (Exception ex)
             {
@@ -104,7 +104,7 @@ namespace Engine
             finally
             {
                 stopwatch.Stop();
-                LogExecutionSummary(input.EndpointNode, stopwatch.Elapsed, executionChain, exception);
+                LogExecutionSummary(input.EndpointNodeId, stopwatch.Elapsed, executionChain, exception);
             }
 
             return result;
@@ -145,7 +145,7 @@ namespace Engine
             // Обработка nodes
             while (current.NextNode != null)
             {
-                Node<TBuffer, TOutput> node = GetNode(current.NextNode);
+                INode<TBuffer, TOutput> node = GetNode(current.NextNode);
 
                 current =
                     await node.Invoke(
@@ -159,30 +159,77 @@ namespace Engine
             return current.Output;
         }
 
-        private Node<TBuffer, TOutput> GetNode(Type nodeType)
+        /// <summary>
+        /// Get all node types from engine
+        /// </summary>
+        /// <returns></returns>
+        private IReadOnlyList<INode<TBuffer, TOutput>> GetAllNodes()
+        {
+            return _serviceProvider.GetServices<INode<TBuffer, TOutput>>().ToList();
+        }
+
+        /// <summary>
+        /// Get all endpoints nodes from engine
+        /// </summary>
+        /// <returns></returns>
+        private IReadOnlyList<IEndpointNode<TBuffer, TOutput>> GetEndpointNodes()
+        {
+            return _serviceProvider.GetServices<IEndpointNode<TBuffer, TOutput>>().ToList();
+        }
+
+        /// <summary>
+        /// Get all middlewares from engine
+        /// </summary>
+        /// <returns></returns>
+        private IReadOnlyList<IMiddleware<TBuffer, TOutput>> GetMiddlewares()
+        {
+            return _serviceProvider.GetServices<IMiddleware<TBuffer, TOutput>>().ToList();
+        }
+
+        private IEndpointNode<TBuffer, TOutput> GetEndpointNode(string nodeId)
+        {
+            var node = GetEndpointNodes().FirstOrDefault(x => 
+            {
+                var prop = x.GetType().GetProperty("GetEndpointId",
+                    BindingFlags.Public | BindingFlags.Static);
+                var id = prop?.GetValue(null) as string;
+                return id == nodeId;
+            });
+            if (node == null) throw new EndpointNodeNotFoundException(nodeId);
+            return node;
+        }
+
+        private INode<TBuffer, TOutput> GetNode(Type nodeType)
+        {
+            var node = GetAllNodes().FirstOrDefault(x => x.GetType() == nodeType);
+            if (node == null) throw new NodeNotFoundException(nodeType);
+            return node;
+        }
+
+        /*private INode<TBuffer, TOutput> GetNode(Type nodeType)
         {
             // If requested type is an endpoint, allow creating instance even if not registered
-            if (typeof(EndpointNode<TBuffer, TOutput>).IsAssignableFrom(nodeType))
+            if (typeof(IEndpointNode<TBuffer, TOutput>).IsAssignableFrom(nodeType))
             {
                 // Try to get from registered endpoint nodes
                 var ep = GetEndpointNodes().FirstOrDefault(x => x.GetType() == nodeType);
                 if (ep != null) return ep;
 
                 // Try resolve from DI
-                var service = _serviceProvider.GetService(nodeType) as Node<TBuffer, TOutput>;
+                var service = _serviceProvider.GetService(nodeType) as INode<TBuffer, TOutput>;
                 if (service != null) return service;
 
                 // Try to create instance using DI-aware activator
                 try
                 {
-                    var created = ActivatorUtilities.CreateInstance(_serviceProvider, nodeType) as Node<TBuffer, TOutput>;
+                    var created = ActivatorUtilities.CreateInstance(_serviceProvider, nodeType) as INode<TBuffer, TOutput>;
                     if (created != null) return created;
                 }
                 catch { }
 
                 try
                 {
-                    var created2 = Activator.CreateInstance(nodeType) as Node<TBuffer, TOutput>;
+                    var created2 = Activator.CreateInstance(nodeType) as INode<TBuffer, TOutput>;
                     if (created2 != null) return created2;
                 }
                 catch { }
@@ -198,23 +245,23 @@ namespace Engine
             if (node != null) return node;
 
             // Try resolve from DI only if registered as service of base Node<>
-            var svc = _serviceProvider.GetServices<Node<TBuffer, TOutput>>().FirstOrDefault(x => x.GetType() == nodeType);
+            var svc = _serviceProvider.GetServices<INode<TBuffer, TOutput>>().FirstOrDefault(x => x.GetType() == nodeType);
             if (svc != null) return svc;
 
             throw new NodeNotFoundException(nodeType);
-        }
+        }*/
 
         private bool CheckEndpointNode(Type nodeType)
         {
             // Allow using either EndpointNode or regular Node types as valid start nodes
-            if (typeof(Node<TBuffer, TOutput>).IsAssignableFrom(nodeType))
+            if (typeof(INode<TBuffer, TOutput>).IsAssignableFrom(nodeType))
                 return true;
 
             return GetEndpointNodes().Any(x => x.GetType() == nodeType);
         }
 
         private void LogExecutionSummary(
-            Type startNode,
+            string startNodeId,
             TimeSpan duration,
             List<string> executionChain,
             Exception? exception)
@@ -223,7 +270,7 @@ namespace Engine
 
             var sb = new StringBuilder();
             sb.AppendLine("=== Execution Summary ===");
-            sb.AppendLine($"Start Node: {startNode}");
+            sb.AppendLine($"Start Node: {startNodeId}");
             sb.AppendLine($"Duration: {duration.TotalMilliseconds}ms");
             sb.AppendLine($"Success: {exception == null}");
 

@@ -6,14 +6,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Engine
+namespace Engine.Nodes
 {
     /// <summary>
     /// Node that can be crawled by engine.
     /// </summary>
     /// <typeparam name="TBuffer">Data that crawls between nodes</typeparam>
     /// <typeparam name="TOutput">Data that can be returned by node after finish</typeparam>
-    public abstract class Node<TBuffer, TOutput> 
+    public interface INode<TBuffer, TOutput> 
         where TBuffer : notnull
         where TOutput : notnull
     {
@@ -23,7 +23,7 @@ namespace Engine
         /// <typeparam name="TNextNode">Next node type</typeparam>
         /// <param name="obj">Buffer</param>
         /// <returns></returns>
-        protected INodeResult<TBuffer, TOutput> Next<TNextNode>(TBuffer obj) where TNextNode : Node<TBuffer, TOutput>
+        protected INodeResult<TBuffer, TOutput> Next<TNextNode>(TBuffer obj) where TNextNode : INode<TBuffer, TOutput>
             => new ProlongedNode<TBuffer, TOutput>(typeof(TNextNode), obj);
 
         /// <summary>

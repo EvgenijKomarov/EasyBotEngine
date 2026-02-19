@@ -15,7 +15,7 @@ namespace Engine
         /// <summary>
         /// Target endpoint node
         /// </summary>
-        Type EndpointNode {  get; }
+        string EndpointNodeId {  get; }
         /// <summary>
         /// Data buffer
         /// </summary>

@@ -8,6 +8,6 @@ namespace Engine.Exceptions
 {
     public class EndpointNodeNotFoundException: Exception
     {
-        public EndpointNodeNotFoundException(Type nodeType) : base($"EndpointNode {nodeType.Name} not found or not registered") { }
+        public EndpointNodeNotFoundException(string nodeTypeId) : base($"EndpointNode {nodeTypeId} not found or not registered") { }
     }
 }
