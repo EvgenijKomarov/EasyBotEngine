@@ -73,7 +73,7 @@ public class FinalNode : Node<TestBuffer, TestOutput>
         CancellationToken? token = null)
     {
         input.History.Add("FinalNode");
-        return Task.FromResult(Complete(new TestOutput
+        return Task.FromResult(Finish(new TestOutput
         {
             FinalValue = input.Value,
             Status = "Completed"
@@ -103,7 +103,7 @@ public class HighValueNode : Node<TestBuffer, TestOutput>
     {
         input.History.Add("HighValueNode");
         input.Value += 100;
-        return Task.FromResult(Complete(new TestOutput
+        return Task.FromResult(Finish(new TestOutput
         {
             FinalValue = input.Value,
             Status = "High"
@@ -119,7 +119,7 @@ public class LowValueNode : Node<TestBuffer, TestOutput>
     {
         input.History.Add("LowValueNode");
         input.Value -= 10;
-        return Task.FromResult(Complete(new TestOutput
+        return Task.FromResult(Finish(new TestOutput
         {
             FinalValue = input.Value,
             Status = "Low"
@@ -223,7 +223,7 @@ public class CancellableNode() : EndpointNode<TestBuffer, TestOutput>("cancellab
         token?.ThrowIfCancellationRequested();
         await Task.Delay(10, token ?? CancellationToken.None);
         input.Value += 100;
-        return Complete(new TestOutput { FinalValue = input.Value });
+        return Finish(new TestOutput { FinalValue = input.Value });
     }
 }
 
@@ -238,7 +238,7 @@ class CountingNode : EndpointNode<TestBuffer, TestOutput>
         CancellationToken? token = null)
     {
         input.History.Add($"CountingNode_Instance_{InstanceCount}");
-        return Task.FromResult(Complete(new TestOutput { FinalValue = input.Value }));
+        return Task.FromResult(Finish(new TestOutput { FinalValue = input.Value }));
     }
 }
 

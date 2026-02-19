@@ -31,7 +31,7 @@ namespace Engine.Nodes
         /// </summary>
         /// <param name="obj">Result of the process</param>
         /// <returns></returns>
-        protected INodeResult<TBuffer, TOutput> Complete(TOutput obj) => new CompletedNode<TBuffer, TOutput>(obj);
+        protected INodeResult<TBuffer, TOutput> Finish(TOutput obj) => new CompletedNode<TBuffer, TOutput>(obj);
 
         /// <summary>
         /// Operation that invoked inside node to process data buffer
