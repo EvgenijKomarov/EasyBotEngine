@@ -11,10 +11,10 @@ namespace Engine.Nodes
     /// </summary>
     /// <typeparam name="TBuffer">Data buffer</typeparam>
     /// <typeparam name="TOutput">Output that can be returned by engine during process</typeparam>
-    public interface IEndpointNode<TBuffer, TOutput> : INode<TBuffer, TOutput>
+    public abstract class EndpointNode<TBuffer, TOutput>(string endpointId) : Node<TBuffer, TOutput>
         where TBuffer : notnull
         where TOutput : notnull
     {
-        public static virtual string GetEndpointId => string.Empty;
+        public string EndpointId = endpointId;
     }
 }

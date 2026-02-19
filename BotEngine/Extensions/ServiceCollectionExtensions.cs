@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace Engine.Extensions
 {
@@ -23,16 +24,11 @@ namespace Engine.Extensions
         public static IServiceCollection AddEngineNode<TNode, TBuffer, TOutput>(
             this IServiceCollection services,
             ServiceLifetime lifetime = ServiceLifetime.Transient)
-            where TNode : notnull, INode<TBuffer, TOutput>
+            where TNode : notnull, Node<TBuffer, TOutput>
             where TBuffer : notnull
             where TOutput : notnull
         {
-            var nodeType = typeof(TNode);
-            var baseNodeType = typeof(INode<TBuffer, TOutput>);
-
-            services.Add(new ServiceDescriptor(nodeType, nodeType, lifetime));
-            services.Add(new ServiceDescriptor(baseNodeType, sp => sp.GetRequiredService(nodeType), lifetime));
-
+            services.AddTransient<Node<TBuffer, TOutput>, TNode>();
             return services;
         }
 
@@ -48,17 +44,12 @@ namespace Engine.Extensions
         public static IServiceCollection AddEngineEndpointNode<TNode, TBuffer, TOutput>(
             this IServiceCollection services,
             ServiceLifetime lifetime = ServiceLifetime.Transient)
-            where TNode : notnull, IEndpointNode<TBuffer, TOutput>
+            where TNode : notnull, EndpointNode<TBuffer, TOutput>
             where TBuffer : notnull
             where TOutput : notnull
         {
-            var nodeType = typeof(TNode);
-            var baseNodeType = typeof(INode<TBuffer, TOutput>);
-            var baseEndpointNodeType = typeof(IEndpointNode<TBuffer, TOutput>);
-
-            services.Add(new ServiceDescriptor(nodeType, nodeType, lifetime));
-            services.Add(new ServiceDescriptor(baseEndpointNodeType, sp => sp.GetRequiredService(nodeType), lifetime));
-            services.Add(new ServiceDescriptor(baseNodeType, sp => sp.GetRequiredService(nodeType), lifetime));
+            services.AddTransient<EndpointNode<TBuffer, TOutput>, TNode>();
+            services.AddTransient<Node<TBuffer, TOutput>, TNode>();
 
             return services;
         }
@@ -75,15 +66,11 @@ namespace Engine.Extensions
         public static IServiceCollection AddEngineMiddleware<TMiddleware, TBuffer, TOutput>(
             this IServiceCollection services,
             ServiceLifetime lifetime = ServiceLifetime.Transient)
-            where TMiddleware : notnull, IMiddleware<TBuffer, TOutput>
+            where TMiddleware : notnull, Middleware<TBuffer, TOutput>
             where TBuffer: notnull
             where TOutput : notnull
         {
-            var middlewareType = typeof(TMiddleware);
-            var baseMiddlewareType = typeof(IMiddleware<TBuffer, TOutput>);
-
-            services.Add(new ServiceDescriptor(middlewareType, middlewareType, lifetime));
-            services.Add(new ServiceDescriptor(baseMiddlewareType, sp => sp.GetRequiredService(middlewareType), lifetime));
+            services.AddTransient<Middleware<TBuffer, TOutput>, TMiddleware>();
 
             return services;
         }

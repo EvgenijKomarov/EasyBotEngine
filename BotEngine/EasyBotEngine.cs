@@ -55,10 +55,14 @@ namespace Engine
         /// Get all endpoint node types from engine
         /// </summary>
         /// <returns></returns>
-        public IReadOnlyList<Type> GetEndpointNodeTypes()
+        public Dictionary<string, Type> GetEndpointNodeTypes()
         {
-            return GetEndpointNodes().Select(x => x.GetType()).ToList();
-        }
+            return GetEndpointNodes()
+				.ToDictionary(
+			    x => x.EndpointId,
+			    x => x.GetType()
+		    );
+		}
 
         /// <summary>
         /// Get all middleware types from engine
@@ -112,7 +116,7 @@ namespace Engine
 
         private async Task<TOutput> Crawl(Type endpointNode, TBuffer input, CancellationToken? token, List<string> executionChain)
         {
-            INodeResult<TBuffer, TOutput> current = new MiddlewaredNode<TBuffer, TOutput>(input);
+            NodeResult<TBuffer, TOutput> current = new MiddlewaredNode<TBuffer, TOutput>(input);
 
             // Обработка middleware
             foreach (var middleware in GetMiddlewares())
@@ -145,7 +149,7 @@ namespace Engine
             // Обработка nodes
             while (current.NextNode != null)
             {
-                INode<TBuffer, TOutput> node = GetNode(current.NextNode);
+                Node<TBuffer, TOutput> node = GetNode(current.NextNode);
 
                 current =
                     await node.Invoke(
@@ -163,101 +167,43 @@ namespace Engine
         /// Get all node types from engine
         /// </summary>
         /// <returns></returns>
-        private IReadOnlyList<INode<TBuffer, TOutput>> GetAllNodes()
+        private IReadOnlyList<Node<TBuffer, TOutput>> GetAllNodes()
         {
-            return _serviceProvider.GetServices<INode<TBuffer, TOutput>>().ToList();
+            return _serviceProvider.GetServices<Node<TBuffer, TOutput>>().ToList();
         }
 
         /// <summary>
         /// Get all endpoints nodes from engine
         /// </summary>
         /// <returns></returns>
-        private IReadOnlyList<IEndpointNode<TBuffer, TOutput>> GetEndpointNodes()
+        private IReadOnlyList<EndpointNode<TBuffer, TOutput>> GetEndpointNodes()
         {
-            return _serviceProvider.GetServices<IEndpointNode<TBuffer, TOutput>>().ToList();
+            return _serviceProvider.GetServices<EndpointNode<TBuffer, TOutput>>().ToList();
         }
 
         /// <summary>
         /// Get all middlewares from engine
         /// </summary>
         /// <returns></returns>
-        private IReadOnlyList<IMiddleware<TBuffer, TOutput>> GetMiddlewares()
+        private IReadOnlyList<Middleware<TBuffer, TOutput>> GetMiddlewares()
         {
-            return _serviceProvider.GetServices<IMiddleware<TBuffer, TOutput>>().ToList();
+            return _serviceProvider.GetServices<Middleware<TBuffer, TOutput>>().ToList();
         }
 
-        private IEndpointNode<TBuffer, TOutput> GetEndpointNode(string nodeId)
+        private EndpointNode<TBuffer, TOutput> GetEndpointNode(string nodeId)
         {
-            var node = GetEndpointNodes().FirstOrDefault(x => 
+            if (GetEndpointNodeTypes().TryGetValue(nodeId, out Type node)) 
             {
-                var prop = x.GetType().GetProperty("GetEndpointId",
-                    BindingFlags.Public | BindingFlags.Static);
-                var id = prop?.GetValue(null) as string;
-                return id == nodeId;
-            });
-            if (node == null) throw new EndpointNodeNotFoundException(nodeId);
-            return node;
+				return GetEndpointNodes().First(x => x.GetType() == node);
+			}
+            throw new EndpointNodeNotFoundException(nodeId);
         }
 
-        private INode<TBuffer, TOutput> GetNode(Type nodeType)
+        private Node<TBuffer, TOutput> GetNode(Type nodeType)
         {
             var node = GetAllNodes().FirstOrDefault(x => x.GetType() == nodeType);
             if (node == null) throw new NodeNotFoundException(nodeType);
             return node;
-        }
-
-        /*private INode<TBuffer, TOutput> GetNode(Type nodeType)
-        {
-            // If requested type is an endpoint, allow creating instance even if not registered
-            if (typeof(IEndpointNode<TBuffer, TOutput>).IsAssignableFrom(nodeType))
-            {
-                // Try to get from registered endpoint nodes
-                var ep = GetEndpointNodes().FirstOrDefault(x => x.GetType() == nodeType);
-                if (ep != null) return ep;
-
-                // Try resolve from DI
-                var service = _serviceProvider.GetService(nodeType) as INode<TBuffer, TOutput>;
-                if (service != null) return service;
-
-                // Try to create instance using DI-aware activator
-                try
-                {
-                    var created = ActivatorUtilities.CreateInstance(_serviceProvider, nodeType) as INode<TBuffer, TOutput>;
-                    if (created != null) return created;
-                }
-                catch { }
-
-                try
-                {
-                    var created2 = Activator.CreateInstance(nodeType) as INode<TBuffer, TOutput>;
-                    if (created2 != null) return created2;
-                }
-                catch { }
-
-                throw new NodeNotFoundException(nodeType);
-            }
-
-            // For non-endpoint nodes only allow registered instances (to enforce explicit registration)
-            var node = GetAllNodes().FirstOrDefault(x => x.GetType() == nodeType);
-            if (node != null) return node;
-
-            node = GetEndpointNodes().FirstOrDefault(x => x.GetType() == nodeType);
-            if (node != null) return node;
-
-            // Try resolve from DI only if registered as service of base Node<>
-            var svc = _serviceProvider.GetServices<INode<TBuffer, TOutput>>().FirstOrDefault(x => x.GetType() == nodeType);
-            if (svc != null) return svc;
-
-            throw new NodeNotFoundException(nodeType);
-        }*/
-
-        private bool CheckEndpointNode(Type nodeType)
-        {
-            // Allow using either EndpointNode or regular Node types as valid start nodes
-            if (typeof(INode<TBuffer, TOutput>).IsAssignableFrom(nodeType))
-                return true;
-
-            return GetEndpointNodes().Any(x => x.GetType() == nodeType);
         }
 
         private void LogExecutionSummary(

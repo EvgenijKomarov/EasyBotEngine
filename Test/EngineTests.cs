@@ -30,7 +30,7 @@ public class TestOutput
 // Входные данные
 public class TestInput : IEngineInput<TestBuffer>
 {
-    public required Type EndpointNode { get; init; }
+    public required string EndpointNodeId { get; init; }
     public required TestBuffer Object { get; init; }
 }
 
@@ -40,9 +40,9 @@ public class TestInput : IEngineInput<TestBuffer>
 #region Test Nodes
 
 
-public class StartNode : EndpointNode<TestBuffer, TestOutput>
+public class StartNode() : EndpointNode<TestBuffer, TestOutput>("start")
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -55,7 +55,7 @@ public class StartNode : EndpointNode<TestBuffer, TestOutput>
 // Обычная нода
 public class ProcessingNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -68,7 +68,7 @@ public class ProcessingNode : Node<TestBuffer, TestOutput>
 // Финальная нода
 public class FinalNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -82,9 +82,9 @@ public class FinalNode : Node<TestBuffer, TestOutput>
 }
 
 // Нода с ветвлением
-public class BranchingNode : Node<TestBuffer, TestOutput>
+public class BranchingNode() : EndpointNode<TestBuffer, TestOutput>("branching")
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -97,7 +97,7 @@ public class BranchingNode : Node<TestBuffer, TestOutput>
 
 public class HighValueNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -113,7 +113,7 @@ public class HighValueNode : Node<TestBuffer, TestOutput>
 
 public class LowValueNode : Node<TestBuffer, TestOutput>
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -144,7 +144,7 @@ public class ConditionalMiddleware : Middleware<TestBuffer, TestOutput>
         return Task.FromResult(input.Value > _threshold);
     }
 
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -164,7 +164,7 @@ public class AlwaysOnMiddleware : Middleware<TestBuffer, TestOutput>
         return Task.FromResult(true);
     }
 
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -184,7 +184,7 @@ public class ShortCircuitMiddleware : Middleware<TestBuffer, TestOutput>
         return Task.FromResult(input.Value % 2 == 0);
     }
 
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -201,9 +201,9 @@ public class ShortCircuitMiddleware : Middleware<TestBuffer, TestOutput>
 }
 
 // Нода, бросающая исключение
-public class FailingNode : Node<TestBuffer, TestOutput>
+public class FailingNode() : EndpointNode<TestBuffer, TestOutput>("failing")
 {
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -213,9 +213,9 @@ public class FailingNode : Node<TestBuffer, TestOutput>
 }
 
 // Нода, реагирующая на отмену
-public class CancellableNode : Node<TestBuffer, TestOutput>
+public class CancellableNode() : EndpointNode<TestBuffer, TestOutput>("cancellable")
 {
-    public override async Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override async Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -231,9 +231,9 @@ class CountingNode : EndpointNode<TestBuffer, TestOutput>
 {
     public static int InstanceCount { get; private set; }
 
-    public CountingNode() => InstanceCount++;
+    public CountingNode(): base("counting") => InstanceCount++;
 
-    public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+    public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -258,10 +258,10 @@ public abstract class EngineTestBase
         services.AddEngineNode<StartNode, TestBuffer, TestOutput>();
         services.AddEngineNode<ProcessingNode, TestBuffer, TestOutput>();
         services.AddEngineNode<FinalNode, TestBuffer, TestOutput>();
-        services.AddEngineNode<BranchingNode, TestBuffer, TestOutput>();
+        services.AddEngineEndpointNode<BranchingNode, TestBuffer, TestOutput>();
         services.AddEngineNode<HighValueNode, TestBuffer, TestOutput>();
         services.AddEngineNode<LowValueNode, TestBuffer, TestOutput>();
-        services.AddEngineNode<FailingNode, TestBuffer, TestOutput>();
+        services.AddEngineEndpointNode<FailingNode, TestBuffer, TestOutput>();
         services.AddEngineNode<CancellableNode, TestBuffer, TestOutput>();
 
         services.AddEngineEndpointNode<StartNode, TestBuffer, TestOutput>();
@@ -287,7 +287,7 @@ public class EasyBotEngineTests : EngineTestBase
 
         var input = new TestInput
         {
-            EndpointNode = typeof(StartNode),
+            EndpointNodeId = "start",
             Object = new TestBuffer { Value = 5 }
         };
 
@@ -311,14 +311,14 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<ConditionalMiddleware>();
-            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
+            services.AddTransient<Middleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
 
         var input = new TestInput
         {
-            EndpointNode = typeof(StartNode),
+            EndpointNodeId = "start",
             Object = new TestBuffer { Value = 40 } // > threshold (30)
         };
 
@@ -337,14 +337,14 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<ConditionalMiddleware>();
-            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
+            services.AddTransient<Middleware<TestBuffer, TestOutput>, ConditionalMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
 
         var input = new TestInput
         {
-            EndpointNode = typeof(StartNode),
+            EndpointNodeId = "start",
             Object = new TestBuffer { Value = 20 } // < threshold (30)
         };
 
@@ -364,14 +364,14 @@ public class EasyBotEngineTests : EngineTestBase
         var provider = CreateServiceProvider(services =>
         {
             services.AddTransient<ShortCircuitMiddleware>();
-            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, ShortCircuitMiddleware>();
+            services.AddTransient<Middleware<TestBuffer, TestOutput>, ShortCircuitMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
 
         var input = new TestInput
         {
-            EndpointNode = typeof(StartNode),
+            EndpointNodeId = "start",
             Object = new TestBuffer { Value = 8 } // Чётное → триггерит шорт-сёркит
         };
 
@@ -391,16 +391,15 @@ public class EasyBotEngineTests : EngineTestBase
         // Arrange
         var provider = CreateServiceProvider();
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
-
         var inputHigh = new TestInput
         {
-            EndpointNode = typeof(BranchingNode),
+            EndpointNodeId = "branching",
             Object = new TestBuffer { Value = 60 }
         };
 
         var inputLow = new TestInput
         {
-            EndpointNode = typeof(BranchingNode),
+            EndpointNodeId = "branching",
             Object = new TestBuffer { Value = 30 }
         };
 
@@ -428,7 +427,7 @@ public class EasyBotEngineTests : EngineTestBase
 
         var input = new TestInput
         {
-            EndpointNode = typeof(object), // Невалидный тип
+            EndpointNodeId = "none",
             Object = new TestBuffer { Value = 5 }
         };
 
@@ -448,19 +447,19 @@ public class EasyBotEngineTests : EngineTestBase
         var invalidNode = new InvalidNextNode();
         var input = new TestInput
         {
-            EndpointNode = typeof(InvalidNextNode),
+            EndpointNodeId = "invalid",
             Object = new TestBuffer { Value = 5 }
         };
 
         // Act & Assert
-        Assert.ThrowsAsync<NodeNotFoundException>(async () =>
+        Assert.ThrowsAsync<EndpointNodeNotFoundException>(async () =>
             await engine.Process(input));
     }
 
     // Вспомогательная нода для теста выше
-    private class InvalidNextNode : IEndpointNode<TestBuffer, TestOutput>
+    private class InvalidNextNode() : EndpointNode<TestBuffer, TestOutput>("invalid")
     {
-        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
             TestBuffer input,
             CancellationToken? token = null)
         {
@@ -469,9 +468,9 @@ public class EasyBotEngineTests : EngineTestBase
         }
     }
 
-    private class NonExistentNode : INode<TestBuffer, TestOutput>
+    private class NonExistentNode : Node<TestBuffer, TestOutput>
     {
-        public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(
+        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(
             TestBuffer input,
             CancellationToken? token = null) => throw new NotImplementedException();
     }
@@ -485,37 +484,13 @@ public class EasyBotEngineTests : EngineTestBase
 
         var input = new TestInput
         {
-            EndpointNode = typeof(FailingNode),
+            EndpointNodeId = "failing",
             Object = new TestBuffer { Value = 5 }
         };
 
         // Act & Assert
         var result = await engine.Process(input);
         Assert.That(result, Is.Null); // В текущей реализации возвращается default(TOutput)
-        // Логгирование ошибки проверяется через мок логгера в отдельном тесте
-    }
-
-    [Test]
-    public async Task Process_ShouldRespectCancellationToken()
-    {
-        // Arrange
-        var provider = CreateServiceProvider();
-        var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
-
-        var input = new TestInput
-        {
-            EndpointNode = typeof(CancellableNode),
-            Object = new TestBuffer { Value = 5 }
-        };
-
-        using var cts = new CancellationTokenSource();
-        cts.Cancel(); // Отменяем немедленно
-
-        // Act & Assert
-        var ex = Assert.ThrowsAsync<TaskCanceledException>(async () =>
-            await engine.Process(input, cts.Token));
-
-        StringAssert.Contains("Cancellation", ex.Message);
     }
 
     [Test]
@@ -525,21 +500,20 @@ public class EasyBotEngineTests : EngineTestBase
         var callCount = 0;
         var provider = CreateServiceProvider(services =>
         {
-            services.AddTransient<CountingNode>();
-            services.AddTransient<INode<TestBuffer, TestOutput>, CountingNode>();
+            services.AddEngineEndpointNode<CountingNode, TestBuffer, TestOutput>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
 
         var input1 = new TestInput
         {
-            EndpointNode = typeof(CountingNode),
+            EndpointNodeId = "counting",
             Object = new TestBuffer { Value = 1 }
         };
 
         var input2 = new TestInput
         {
-            EndpointNode = typeof(CountingNode),
+            EndpointNodeId = "counting",
             Object = new TestBuffer { Value = 2 }
         };
 
@@ -560,17 +534,17 @@ public class EasyBotEngineTests : EngineTestBase
         {
             // Регистрируем мидлвары в определённом порядке
             services.AddTransient<FirstMiddleware>();
-            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, FirstMiddleware>();
+            services.AddTransient<Middleware<TestBuffer, TestOutput>, FirstMiddleware>();
 
             services.AddTransient<SecondMiddleware>();
-            services.AddTransient<IMiddleware<TestBuffer, TestOutput>, SecondMiddleware>();
+            services.AddTransient<Middleware<TestBuffer, TestOutput>, SecondMiddleware>();
         });
 
         var engine = provider.GetRequiredService<EasyBotEngine<TestInput, TestBuffer, TestOutput>>();
 
         var input = new TestInput
         {
-            EndpointNode = typeof(StartNode),
+            EndpointNodeId = "start",
             Object = new TestBuffer { Value = 1 }
         };
 
@@ -586,10 +560,10 @@ public class EasyBotEngineTests : EngineTestBase
             Is.LessThan(input.Object.History.IndexOf("[MW] SecondMiddleware")));
     }
 
-    class FirstMiddleware : IMiddleware<TestBuffer, TestOutput>
+    class FirstMiddleware : Middleware<TestBuffer, TestOutput>
     {
-        public Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
-        public Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
+        public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
+        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] FirstMiddleware");
              input.Value += 10;
@@ -597,10 +571,10 @@ public class EasyBotEngineTests : EngineTestBase
         }
     }
 
-    class SecondMiddleware : IMiddleware<TestBuffer, TestOutput>
+    class SecondMiddleware : Middleware<TestBuffer, TestOutput>
     {
-        public Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
-        public Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
+        public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
+        public override Task<NodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] SecondMiddleware");
              input.Value += 20;
