@@ -138,6 +138,7 @@ public class ConditionalMiddleware : Middleware<TestBuffer, TestOutput>
     }
 
     public override Task<bool> GetCondition(
+        Type type,
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -158,6 +159,7 @@ public class ConditionalMiddleware : Middleware<TestBuffer, TestOutput>
 public class AlwaysOnMiddleware : Middleware<TestBuffer, TestOutput>
 {
     public override Task<bool> GetCondition(
+        Type type,
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -178,6 +180,7 @@ public class AlwaysOnMiddleware : Middleware<TestBuffer, TestOutput>
 public class ShortCircuitMiddleware : Middleware<TestBuffer, TestOutput>
 {
     public override Task<bool> GetCondition(
+        Type type,
         TestBuffer input,
         CancellationToken? token = null)
     {
@@ -562,7 +565,7 @@ public class EasyBotEngineTests : EngineTestBase
 
     class FirstMiddleware : Middleware<TestBuffer, TestOutput>
     {
-        public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
+        public override Task<bool> GetCondition(Type type, TestBuffer input, CancellationToken? token) => Task.FromResult(true);
         public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] FirstMiddleware");
@@ -573,7 +576,7 @@ public class EasyBotEngineTests : EngineTestBase
 
     class SecondMiddleware : Middleware<TestBuffer, TestOutput>
     {
-        public override Task<bool> GetCondition(TestBuffer input, CancellationToken? token) => Task.FromResult(true);
+        public override Task<bool> GetCondition(Type type, TestBuffer input, CancellationToken? token) => Task.FromResult(true);
         public override Task<INodeResult<TestBuffer, TestOutput>> Invoke(TestBuffer input, CancellationToken? token)
         {
              input.History.Add("[MW] SecondMiddleware");

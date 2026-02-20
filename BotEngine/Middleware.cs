@@ -30,7 +30,7 @@ namespace Engine
         /// <summary>
         /// Return this to complete middleware
         /// </summary>
-        /// <param name="obj"></param>
+        /// <param name="obj">Buffer</param>
         /// <returns></returns>
         protected INodeResult<TBuffer, TOutput> Complete(TBuffer obj) => new MiddlewaredNode<TBuffer, TOutput>(obj);
 
@@ -42,10 +42,10 @@ namespace Engine
         protected INodeResult<TBuffer, TOutput> Finish(TOutput output) => new CompletedNode<TBuffer, TOutput>(output);
 
         /// <summary>
-        /// Conditions of middleware
+        /// Conditions of middleware. If true, middleware will be invoked. If false, middleware will be skipped and engine will try to find another one
         /// </summary>
         /// <returns></returns>
-        public virtual Task<bool> GetCondition(TBuffer data, CancellationToken? token = null) => Task.FromResult(true);
+        public virtual Task<bool> GetCondition(Type targetNode, TBuffer data, CancellationToken? token = null) => Task.FromResult(true);
 
         /// <summary>
         /// Operation that invoked inside middleware to process data buffer

@@ -121,7 +121,7 @@ namespace Engine
             // Обработка middleware
             foreach (var middleware in GetMiddlewares())
             {
-                if (await middleware.GetCondition(current.Object, token))
+                if (await middleware.GetCondition(endpointNode, current.Object, token))
                 {
                     current =
                         await middleware.Invoke(current.Object, token);
