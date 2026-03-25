@@ -25,6 +25,10 @@ namespace Engine
         private readonly ILogger<EasyBotEngine<TInput, TBuffer, TOutput>>? _logger;
         private readonly IServiceProvider _serviceProvider;
 
+        private readonly List<Type> _nodeTypes = new();
+        private readonly Dictionary<string, Type> _endpointNodeTypes = new();
+        private readonly List<Type> _middlewareTypes = new();
+
         /// <summary>
         /// 
         /// </summary>
@@ -40,6 +44,10 @@ namespace Engine
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
+
+            _nodeTypes = _serviceProvider.GetServices<Node<TBuffer, TOutput>>().Select(x => x.GetType()).ToList();
+            _endpointNodeTypes = _serviceProvider.GetServices<EndpointNode<TBuffer, TOutput>>().ToDictionary(x => x.EndpointId, x => x.GetType());
+            _middlewareTypes = _serviceProvider.GetServices<Middleware<TBuffer, TOutput>>().Select(x => x.GetType()).ToList();
         }
 
         /// <summary>
@@ -48,7 +56,7 @@ namespace Engine
         /// <returns></returns>
         public IReadOnlyList<Type> GetAllNodeTypes()
         {
-            return GetAllNodes().Select(x => x.GetType()).ToList();
+            return _nodeTypes.AsReadOnly();
         }
 
         /// <summary>
@@ -57,11 +65,7 @@ namespace Engine
         /// <returns></returns>
         public Dictionary<string, Type> GetEndpointNodeTypes()
         {
-            return GetEndpointNodes()
-				.ToDictionary(
-			    x => x.EndpointId,
-			    x => x.GetType()
-		    );
+            return _endpointNodeTypes;
 		}
 
         /// <summary>
@@ -70,7 +74,7 @@ namespace Engine
         /// <returns></returns>
         public IReadOnlyList<Type> GetMiddlewareTypes()
         {
-            return GetMiddlewares().Select(x => x.GetType()).ToList();
+            return _middlewareTypes.AsReadOnly();
         }
 
         /// <summary>
@@ -88,10 +92,15 @@ namespace Engine
 
             try
             {
-                var endpointNode = GetEndpointNode(input.EndpointNodeId);
-                _logger?.LogDebug("Starting process with node: {NodeIndex}", input.EndpointNodeId);
-
-                result = await Crawl(endpointNode.GetType(), input.Object, token, executionChain);
+                if (GetEndpointNodeTypes().TryGetValue(input.EndpointNodeId, out Type endpointNode))
+                {
+                    _logger?.LogDebug("Starting process with node: {NodeIndex}", input.EndpointNodeId);
+                    result = await Crawl(endpointNode, input.Object, token, executionChain);
+                }
+                else
+                {
+                    throw new EndpointNodeNotFoundException(input.EndpointNodeId);
+                }
             }
             catch (Exception ex)
             {
@@ -119,7 +128,7 @@ namespace Engine
             INodeResult<TBuffer, TOutput> current = new MiddlewaredNode<TBuffer, TOutput>(input);
 
             // Обработка middleware
-            foreach (var middleware in GetMiddlewares())
+            foreach (var middleware in _serviceProvider.GetServices<Middleware<TBuffer, TOutput>>())
             {
                 if (await middleware.GetCondition(endpointNode, current.Object, token))
                 {
@@ -163,45 +172,9 @@ namespace Engine
             return current.Output;
         }
 
-        /// <summary>
-        /// Get all node types from engine
-        /// </summary>
-        /// <returns></returns>
-        private IReadOnlyList<Node<TBuffer, TOutput>> GetAllNodes()
-        {
-            return _serviceProvider.GetServices<Node<TBuffer, TOutput>>().ToList();
-        }
-
-        /// <summary>
-        /// Get all endpoints nodes from engine
-        /// </summary>
-        /// <returns></returns>
-        private IReadOnlyList<EndpointNode<TBuffer, TOutput>> GetEndpointNodes()
-        {
-            return _serviceProvider.GetServices<EndpointNode<TBuffer, TOutput>>().ToList();
-        }
-
-        /// <summary>
-        /// Get all middlewares from engine
-        /// </summary>
-        /// <returns></returns>
-        private IReadOnlyList<Middleware<TBuffer, TOutput>> GetMiddlewares()
-        {
-            return _serviceProvider.GetServices<Middleware<TBuffer, TOutput>>().ToList();
-        }
-
-        private EndpointNode<TBuffer, TOutput> GetEndpointNode(string nodeId)
-        {
-            if (GetEndpointNodeTypes().TryGetValue(nodeId, out Type node)) 
-            {
-				return GetEndpointNodes().First(x => x.GetType() == node);
-			}
-            throw new EndpointNodeNotFoundException(nodeId);
-        }
-
         private Node<TBuffer, TOutput> GetNode(Type nodeType)
         {
-            var node = GetAllNodes().FirstOrDefault(x => x.GetType() == nodeType);
+            var node = _serviceProvider.GetServices<Node<TBuffer, TOutput>>().FirstOrDefault(x => x.GetType() == nodeType);
             if (node == null) throw new NodeNotFoundException(nodeType);
             return node;
         }
